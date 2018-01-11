@@ -37,10 +37,7 @@ sum(variances[1:7])/sum(variances) ## 90% variation explained by first 7 princip
 PCA.scores<-train.data.scaled%*%train.data.scaled.pca$rotation[,1:7]##exact same values
 
 
-##x=rep(1:26,40)
-##PCA.scores.new = cbind(x,PCA.scores)
-##PCA.scores.new = as.data.frame(PCA.scores.new)
-##PCA.scores.new$x = as.factor(PCA.scores.new$x)
+
 
 
 
@@ -123,7 +120,7 @@ logistic.train.accu = sum(diag(conf.mat.logistic.train))/sum(conf.mat.logistic.t
 logistic.train.accu = round(logistic.train.accu,1)
 logistic.pred.test = predict(logitmodel,test.data.PCA.scores.df,type = 'response')
 
-##ifelse(a %% 2 == 0,"even","odd")
+
 logistic.pred.test.class = ifelse(logistic.pred.test >=0.5,1,0)
 logistic.conf.mat=table(logistic.pred.test.class,test.data$CLassification)
 logistic.reg.test.accu=sum(diag(logistic.conf.mat))/sum(logistic.conf.mat)*100
@@ -265,7 +262,4 @@ test.accuracy.plot=ggplot(accu.df,aes(x=Algorithm,y=Test.Accuracy))+geom_bar(sta
 test.accuracy.plot
 library(gridExtra)
 grid.arrange(train.accuracy.plot,test.accuracy.plot,ncol=2)
-##make the roc curve
 
-
-## make the roc curve
