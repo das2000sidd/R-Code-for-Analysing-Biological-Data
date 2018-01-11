@@ -6,6 +6,6 @@ Bagging,
 Linear Discriminant Analysis,
 Logistic regression,
 Decision Tree,
-and Random Forests
+and Random Forests.
 The dataset can be obtained from here: http://archive.ics.uci.edu/ml/datasets/Parkinson+Speech+Dataset+with++Multiple+Types+of+Sound+Recordings
 
