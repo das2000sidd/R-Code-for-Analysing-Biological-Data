@@ -1,4 +1,4 @@
-train.data = read.table(file='train_data.txt',header = FALSE,sep = ',') ## not sure what to predict
+train.data = read.table(file='train_data.txt',header = FALSE,sep = ',') 
 library(data.table)
 summary(train.data)
 setnames(train.data,old=c('V1','V28','V29'),new=c('SubId','UPDRS','CLassification'))
