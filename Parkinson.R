@@ -45,7 +45,7 @@ PCA.scores<-train.data.scaled%*%train.data.scaled.pca$rotation[,1:7]##exact same
 andrews(df=PCA.scores.new,clr=1,main='Andrews Plot for Voice Samples Measured',type = 2)
 
 
-##plot(PCA.scores[,1],PCA.scores[,2])
+
 library(psych)
 ## ACTUAL CLASSIFICATION LABEL
 PCA.scores.df = as.data.frame(PCA.scores)
@@ -56,8 +56,7 @@ pairs.panels(PCA.scores.df[,-8],gap=0,bg=c('red','green')[PCA.scores.df$`train.d
 ## above plot shows not good separation
 distance.matrix = dist(PCA.scores.df[,-8])
 kc<-kmeans(distance.matrix,2,50) ## not good clsuter identification
-##PCA.scores.With.cluster = cbind(PCA.scores,kc$cluster,prior = c(1,1)/2)
-##plot(PCA.scores.With.cluster[,1],PCA.scores.With.cluster[,2],col=PCA.scores.With.cluster[,6])## not good separation
+
 attributes(kc)
 kc$cluster
 kc$size ## gives 2 clusters, does not do well in identifying cluster sizes
@@ -125,7 +124,7 @@ logistic.pred.test.class = ifelse(logistic.pred.test >=0.5,1,0)
 logistic.conf.mat=table(logistic.pred.test.class,test.data$CLassification)
 logistic.reg.test.accu=sum(diag(logistic.conf.mat))/sum(logistic.conf.mat)*100
 logistic.reg.test.accu = round(logistic.reg.test.accu,1)
-## 54% percent accuracy
+
 drop1(logitmodel,test="Chi") ## PC1 could be dropped
 PCA.scores.df.no.col1 = PCA.scores.df[,-1]
 logitmodel2<-glm(PCA.scores.df.no.col1$`train.data$CLassification`~.,family=binomial("logit"),PCA.scores.df.no.col1,control = list(maxit = 50))
@@ -144,7 +143,7 @@ logistic.test.accu.2 = round(logistic.test.accu.2,1)
 exp(confint(logitmodel)) ## weak effects
 exp(confint(logitmodel2)) ## weak effects
 ## Building a regression tree
-##library(party)
+
 library(tree)
 fit.tree <- tree(PCA.scores.df$`train.data$CLassification`~., data = PCA.scores.df)
 plot(fit.tree)
@@ -175,7 +174,7 @@ pruned.tree.train.pred.accu = round(pruned.tree.train.pred.accu,1)
 
 
 pruned.tree.test.pred = predict(pruned.tree.new,test.data.PCA.scores.df,type = 'class')
-##test.data.PCA.scores.df.tree.pred.pruned = cbind(test.data.PCA.scores.df,tree.pred,test.data$CLassification,pruned.tree.pred)
+
 pruned.tree.test.conf.mat = table(pruned.tree.test.pred,test.data$CLassification)
 pruned.tree.test.conf.mat
 pruned.tree.test.accu=pruned.tree.test.conf.mat[2,1]/sum(pruned.tree.test.conf.mat)*100 ## 36.3%
@@ -184,7 +183,7 @@ library(randomForest)
 tneRF.res = tuneRF(PCA.scores.df[,-8],PCA.scores.df[,8],stepFactor = 1,plot=TRUE,ntreeTry = 500,trace = TRUE,improve=0.05)
 
 rf=randomForest(PCA.scores.df$`train.data$CLassification`~.,data=PCA.scores.df,importance=TRUE,ntree=500,nodesize=50,mtry=2)
-## random forest avoids overfitting
+
 rf.train.pred = predict(rf,PCA.scores.df,type='class')
 conf.mat.train.rf=table(rf.train.pred,PCA.scores.df$`train.data$CLassification`)
 conf.mat.train.rf
