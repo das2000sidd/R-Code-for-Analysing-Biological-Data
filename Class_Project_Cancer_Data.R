@@ -58,7 +58,7 @@ table(glm.pred,Contig42854$meta)
 ## which should not be the case for an ideal classifier
 ## Hence single gene prediction does not work as independent expressions are poor determiners
 ## of cancer outcome
-## RIDGE REGRESSION (alpha=0) STill to answer how many genes are used
+
 
 library(glmnet)
 
