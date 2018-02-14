@@ -1,7 +1,8 @@
 
 ##The data is meant for the research group of the lab and hence cannot be posted.
 ## This is the R code used for statistical analysis of data.
-## It involves applying machine learning algorithm to model classification of individuals using metadata where the original class label was based on microbiome data 
+## It involves applying machine learning algorithm to model classification of individuals using metadata where the original class label 
+##was based on microbiome data.
 load("C:/Users/Siddhartha Das/Desktop/ALL_NON_SYSTEM_FILES/MASTERS THESIS PROJECT/VDP2999_META.Rdata")
 meta.Data.Cols.Extract = read.csv(file="KnownMetaDataColsToExtract.csv",header = FALSE)
 meta.Data.Cols.Chr = as.character(meta.Data.Cols.Extract$V1)
