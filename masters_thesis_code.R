@@ -1,5 +1,5 @@
 
-##The data is meant for the research group of the lab and hence cannot be posted.
+##The data is proprietary and hence cannot be posted.
 ## This is the R code used for statistical analysis of data.
 ## It involves applying machine learning algorithm to model classification of individuals using metadata where the original class label 
 ##was based on microbiome data.
