@@ -171,15 +171,6 @@ tree.sample = model.fitting.tree(sig.Meta.Data.Vars.less.than.5.percent.indiv.an
 tree.rf = model.fitting.tree(sig.Meta.Data.Vars.less.than.5.percent.indiv.and.feature.missing,'rf')
 
 
-##Linear discriminant analysis fitting function
-
-
-
-
-
-
-
-
 ##Random forest function
 model.fitting.rf=function(x,y){
   library(randomForest)
