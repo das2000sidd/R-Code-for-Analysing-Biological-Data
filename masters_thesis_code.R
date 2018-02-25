@@ -59,8 +59,7 @@ write.csv(allDataCOmbined,file="all3000SampleDataCombined.csv",row.names = TRUE,
 metaDataAsPerNewDF = read.csv(file="MetaData_PaperTable_Label_Matching.csv",header = TRUE,check.names = FALSE)
 metaDataComplete = metaDataAsPerNewDF$`Terminology in 3000 sample table`
 sig.Meta.Data.Vars.Only = allDataCOmbined[,colnames(allDataCOmbined) %in% metaDataComplete]
-sig.Meta.Data.Vars.Cmpl = sig.Meta.Data.Vars.Only[complete.cases(sig.Meta.Data.Vars.Only),]
-sig.Meta.Data.Vars.Not.Cmpl = sig.Meta.Data.Vars.Only[!complete.cases(sig.Meta.Data.Vars.Only),]
+
 library(mice)
 md.Pattern.Results=md.pattern(sig.Meta.Data.Vars.Only)
 ## frequency of sick leaves, no of work days and age at first work had 50%,50% and 27% missing. dropping those initially
@@ -71,182 +70,227 @@ percent.miss = function(x){
   sum(is.na(x))/length(x)*100
 }
 library(VIM)
-aggr_plot <- aggr(sig.Meta.Data.Vars.Only.max.ten.percent.missing, col=c('navyblue','red'), numbers=TRUE, sortVars=TRUE, labels=names(data), cex.axis=.7, gap=3, ylab=c("Histogram of missing data","Pattern"))
-missing.feature.percent.by.var = apply(sig.Meta.Data.Vars.Only,1,percent.miss) ## 2 is for cols, 1 is for rows
-sort(missing.feature.percent.by.var) ## OVER 5% MISSING IS VERY BAD
-sig.MetaDataVars.Indiv.Less.Than.Five.Percent.Missing = sig.Meta.Data.Vars.Only[missing.feature.percent.by.var<5,]##1975 observations,58 features
-sig.MetaDataVars.Indiv.Greater.Than.Five.Percent.Missing = sig.Meta.Data.Vars.Only[missing.feature.percent.by.var>5,]
-missing.feature.percent.by.Feature = apply(sig.MetaDataVars.Indiv.Less.Than.Five.Percent.Missing,2,percent.miss) ## 2 is for cols
-sig.MetaDataVars.Features.Less.Than.Five.Percent.Missing = sig.MetaDataVars.Indiv.Less.Than.Five.Percent.Missing[,missing.feature.percent.by.Feature<5] ## 1975 observations, 58 features
-sig.MetaDataVars.Features.More.Than.Five.Percent.Missing = sig.MetaDataVars.Indiv.Less.Than.Five.Percent.Missing[,missing.feature.percent.by.Feature>5]
-only.cont.colname = function(x){
-  (!is.factor(x)==TRUE)
-}
-sig.MetaDataVars.Features.Less.Than.Five.Percent.Missing.Cont1 = sig.MetaDataVars.Features.Less.Than.Five.Percent.Missing[,1:3]
-sig.MetaDataVars.Features.Less.Than.Five.Percent.Missing.Cont2 = sig.MetaDataVars.Features.Less.Than.Five.Percent.Missing[,10:18]
-sig.MetaDataVars.Features.Less.Than.Five.Percent.Missing.Cont3 = sig.MetaDataVars.Features.Less.Than.Five.Percent.Missing[,c(20,23,26,27,29,30,31,32,33)]
-sig.MetaDataVars.Features.Less.Than.Five.Percent.Missing.Cont4 = sig.MetaDataVars.Features.Less.Than.Five.Percent.Missing[,50:ncol(sig.MetaDataVars.Features.Less.Than.Five.Percent.Missing)-1]
-sig.MetaDataVars.Features.Less.Than.Five.Percent.Missing.Cont = cbind(sig.MetaDataVars.Features.Less.Than.Five.Percent.Missing.Cont1,
-                                                                      sig.MetaDataVars.Features.Less.Than.Five.Percent.Missing.Cont2,
-                                                                      sig.MetaDataVars.Features.Less.Than.Five.Percent.Missing.Cont3,
-                                                                      sig.MetaDataVars.Features.Less.Than.Five.Percent.Missing.Cont4)
-'%ni%' <- Negate('%in%')
-metadata.col.names = names(sig.MetaDataVars.Features.Less.Than.Five.Percent.Missing)
-sig.MetaDataVars.Only.Categ = sig.MetaDataVars.Features.Less.Than.Five.Percent.Missing[,metadata.col.names %ni% names(sig.MetaDataVars.Features.Less.Than.Five.Percent.Missing.Cont)]
-for(i in 1:ncol(sig.MetaDataVars.Only.Categ)){
-  sig.MetaDataVars.Only.Categ[i] = as.factor(unlist(sig.MetaDataVars.Only.Categ[i]))
-}
+aggr_plot <- aggr(sig.Meta.Data.Vars.Only.max.ten.percent.missing, col=c('navyblue','red','green'), numbers=TRUE, sortVars=TRUE, labels=names(data), cex.axis=.7, gap=3, ylab=c("Histogram of missing data","Pattern"),cex.axs=colnames(sig.Meta.Data.Vars.Only.max.ten.percent.missing))
+missing.feature.percent.by.var = apply(sig.Meta.Data.Vars.Only,2,percent.miss) ## 2 is for cols, 1 is for rows
+missing.data.prop = sort(missing.feature.percent.by.var) ## OVER 5% MISSING IS VERY BAD
+write.table(missing.data.prop,file='missing_data_prop.txt',quote = FALSE)
+missing.feature.less.than.5.percent=which(missing.feature.percent.by.var<10)
+sig.MetaDataVars.features.Less.Than.Five.Percent.Missing = sig.Meta.Data.Vars.Only[,missing.feature.less.than.5.percent]##1975 observations,58 features
 
-library(missForest)
-sig.Meta.Data.cat.miss = prodNA(sig.MetaDataVars.Only.Categ,noNA = 0.1)
-summary(sig.Meta.Data.cat.miss)
-sig.Meta.Data.cat.imputed = missForest(sig.Meta.Data.cat.miss)     
-categorical.imputed.data = sig.Meta.Data.cat.imputed$ximp ## 1975 obs and 28 variables
-sig.Meta.Data.cat.imputed$OOBerror ## 16% error
-imput.results=mice(sig.MetaDataVars.Features.Less.Than.Five.Percent.Missing.Cont,m=40,method = "pmm",seed = 500)##1975 observations of 58 variables
-data.after.imput = complete(imput.results,action = 'long',include = TRUE)
-data.after.imput.1 = complete(imput.results,1) ## 1975 observations 32 variables
-combined.cat.cont.imputed.data = cbind(categorical.imputed.data,data.after.imput.1)
-##na.check.sig.metadata.vars = apply(sig.MetaDataVars.Features.Less.Than.Five.Percent.Missing,2,percent.miss)
-##length(which((na.check.sig.metadata.vars) > 0))
-write.csv(sig.MetaDataVars.Features.Less.Than.Five.Percent.Missing,file='checkForNA.csv',row.names = TRUE,na='NOT_FOUND')
+missing.feature.percent.by.indiv = apply(sig.MetaDataVars.features.Less.Than.Five.Percent.Missing,1,percent.miss) ## 2 is for cols,1 is for rows
+sort(missing.feature.percent.by.indiv) 
+missing.indiv.less.than.5.percent=which(missing.feature.percent.by.indiv<10)
+missing.indiv.greater.than.5.percent = which(missing.feature.percent.by.indiv>10)
+sig.Meta.Data.Vars.less.than.5.percent.indiv.and.feature.missing = sig.MetaDataVars.features.Less.Than.Five.Percent.Missing[missing.indiv.less.than.5.percent,]
+check.for.feature.miss = apply(sig.Meta.Data.Vars.less.than.5.percent.indiv.and.feature.missing,2,percent.miss)
+check.for.indiv.miss = apply(sig.Meta.Data.Vars.less.than.5.percent.indiv.and.feature.missing,1,percent.miss)
+length(which(check.for.indiv.miss>10))
+length(which(check.for.feature.miss>10))
+ ## now continue analysis with  sig.Meta.Data.Vars.less.than.5.percent.indiv.and.feature.missing
+sig.Meta.Data.Vars.less.than.5.percent.indiv.and.feature.missing$was_exposed_to_domestic_second_hand_smoking
+## 'PARTICIPANTS_ALLERGY_food','PARTICIPANTS_ALLERGY_food.1','A07EC02','J01CA04','J01CR02','J01XE01'
+## 'FAMILYMEMBER_Inflammatory_Bowel_Disease_andere','FAMILYMEMBER_Inflammatory_Bowel_Disease_Colitis_ulcerosa'
+## 'FOODSUPPLEMENT_Mg','FOODSUPPLEMENT_Q10','A07EC02.1','G03AA12','G03DA04','J01CA04.1'
+## 'J01CR02.1','J01XE01.1','L04AX01','N03AE01','N06AX16','R06AX28','A06AD15_65','G03CA04_CC06','L04AB'
+## 'OTHER_GASTROENTRITIS_TREATMENT','do_you_want_to_do_something_about_your_weight'
+## 'was_exposed_to_domestic_second_hand_smoking'
+only.categ.vars = c('PARTICIPANTS_ALLERGY_food','A07EC02','J01CA04','J01CR02','J01XE01','FAMILYMEMBER_Inflammatory_Bowel_Disease_andere',
+                    'FAMILYMEMBER_Inflammatory_Bowel_Disease_Colitis_ulcerosa','FOODSUPPLEMENT_Mg','FOODSUPPLEMENT_Q10',
+                    'A07EC02.1','G03AA12','G03DA04','J01CA04.1','J01CR02.1','J01XE01.1','L04AX01','N03AE01','N06AX16',
+                    'R06AX28','A06AD15_65','G03CA04_CC06','L04AB','OTHER_GASTROENTRITIS_TREATMENT',
+                    'do_you_want_to_do_something_about_your_weight','was_exposed_to_domestic_second_hand_smoking')
+for (i in only.categ.vars){
+  sig.Meta.Data.Vars.less.than.5.percent.indiv.and.feature.missing[,i] = as.factor(unlist(sig.Meta.Data.Vars.less.than.5.percent.indiv.and.feature.missing[,i]))
+}
+sig.Meta.Data.Vars.less.than.5.percent.indiv.and.feature.missing$BetaGlobulines = sig.Meta.Data.Vars.less.than.5.percent.indiv.and.feature.missing$`BÃ¨taGlobulines_gL`
+sig.Meta.Data.Vars.less.than.5.percent.indiv.and.feature.missing$`BÃ¨taGlobulines_gL` = NULL
+sig.Meta.Data.Vars.less.than.5.percent.indiv.and.feature.missing$A07EC02.1= NULL
+sig.Meta.Data.Vars.less.than.5.percent.indiv.and.feature.missing$PARTICIPANTS_ALLERGY_food.1=NULL
+sig.Meta.Data.Vars.less.than.5.percent.indiv.and.feature.missing$J01CA04.1= NULL
+sig.Meta.Data.Vars.less.than.5.percent.indiv.and.feature.missing$J01CR02.1 = NULL
+sig.Meta.Data.Vars.less.than.5.percent.indiv.and.feature.missing$J01XE01.1 = NULL
+##imput.results=mice(sig.Meta.Data.Vars.less.than.5.percent.indiv.and.feature.missing,m=40,method = "pmm",seed = 500)##1975 observations of 58 variables
+##data.after.imput.1 = complete(imput.results,1)
+##data.after.imput.2 = complete(imput.results,2)
 DMM.class.data = read.csv(file="DMM4clusters2999Samples.csv",header = TRUE)
-View(DMM.class.data)
+##View(DMM.class.data)
 DMM4.class.data = DMM.class.data[,c(1,4)]
-View(DMM4.class.data)
-View(combined.cat.cont.imputed.data)
-combined.cat.cont.imputed.data$SampleId = rownames(combined.cat.cont.imputed.data)
-data.after.imput.1.With.dmm.label = merge(combined.cat.cont.imputed.data,DMM4.class.data,by=c('SampleId'),all.x = TRUE)
-View(data.after.imput.1.With.dmm.label)
-data.after.imput.1.With.dmm.label$DMM_4 = as.factor(data.after.imput.1.With.dmm.label$DMM_4)
-rownames(data.after.imput.1.With.dmm.label) = data.after.imput.1.With.dmm.label$SampleId
-data.after.imput.1.With.dmm.label$SampleId = NULL
-data.after.imput.1.With.dmm.label$DMM_4 = as.factor(data.after.imput.1.With.dmm.label$DMM_4)
-## dropping data with one level
-data.after.imput.1.With.dmm.label$J01CR02.1 = NULL
+
+##View(DMM4.class.data)
+
+
+types.of.imput=c('pmm','midastouch','sample','cart','rf','2lonly.pmm')
+
+
+
+
+##pmm works
+##midastouch does not work
+##sample works
+##cart works
+##rf works
+## 2lonly.pmm does not work
+
+
 set.seed(1)
-trainIndex = sample(1:nrow(data.after.imput.1.With.dmm.label),2*nrow(data.after.imput.1.With.dmm.label)/3)##1243 only
+trainIndex = sample(1:nrow(sig.Meta.Data.Vars.less.than.5.percent.indiv.and.feature.missing),2*nrow(sig.Meta.Data.Vars.less.than.5.percent.indiv.and.feature.missing)/3)##1243 only
 testIndex = -trainIndex 
-trainData = data.after.imput.1.With.dmm.label[trainIndex,] ##1310
-View(trainData)
-testData = data.after.imput.1.With.dmm.label[testIndex,] ## 659
+
+
+##DECISON TREE FUNCTION
+model.fitting.tree=function(x,y){
+  library(tree)
+imput.results=mice(x,m=3,method = y,seed = 500)
+data.after.imput=complete(imput.results)
+data.after.imput$SampleId = as.factor(rownames(data.after.imput))
+data.after.imput.dmm = merge(data.after.imput,DMM4.class.data,DMM4.class.data,by.x=c('SampleId'),by.y=c('SampleId'))
+data.after.imput.dmm$DMM_4 = as.factor(data.after.imput.dmm$DMM_4)
+  
+trainData = data.after.imput.dmm[trainIndex,] ##1310
+
+testData = data.after.imput.dmm[testIndex,] ## 659
 testData.DMM4.label = testData$DMM_4
-##testDataToUse = testData[,-which(names(testData) %in% c("DMM_4"))]
-testData$BetaGLobulines = testData$`BètaGlobulines_gL`
-testData$`BètaGlobulines_gL` = NULL
-##dat[ , -which(names(dat) %in% c("z","u"))]
-##fit a simple tree
-library(tree)
-trainData$BetaGLobulines = trainData$`BètaGlobulines_gL`
-trainData$`BètaGlobulines_gL` = NULL
-trainData$FAMILYMEMBER_Inflammatory_Bowel_Disease_andere= NULL
-testData$FAMILYMEMBER_Inflammatory_Bowel_Disease_andere= NULL
-tree.model = tree(trainData$DMM_4~.,trainData)
-summary(tree.model)
-tree.model$frame
-plot(tree.model)
-text(tree.model) ## tree only showing classes 1,2 does not make sense
-tree_predicted_train = predict(tree.model,trainData,type='class')
+##DECISION TREE
+tree.model = tree(trainData$DMM_4~.,trainData[,-1])
+tree_predicted_train = predict(tree.model,trainData[,-1],type='class')
 tree.pred.conf.mat.train = table(tree_predicted_train,trainData$DMM_4)
 tree.pred.acc.train = sum(diag(tree.pred.conf.mat.train))/sum(tree.pred.conf.mat.train)*100
 tree.pred.acc.train
-tree.pred.test <- predict(tree.model,testData,type = "class")
+tree.pred.test <- predict(tree.model,testData[,-1],type = 'class')
 tree.pred.conf.mat.test = table(tree.pred.test,testData.DMM4.label)
- ## is not making sense since only two classes predicted
+  ## is not making sense since only two classes predicted
 tree.pred.acc.test = sum(diag(tree.pred.conf.mat.test)) / sum(tree.pred.conf.mat.test)*100 ## 39% accuracy
 tree.pred.acc.test
-library(randomForest)
-trainData = trainData[,c(1:55,57,56)]
-mtry.results = tuneRF(trainData[,1:56],trainData[,57],stepFactor = 1.5,improve = 1e-5,ntreeTry = 500)
-print(mtry.results)
-# Manual Search
-library(caret)
-control <- trainControl(method="repeatedcv", number=10, repeats=3, search="grid")
-tunegrid <- expand.grid(.mtry=c(sqrt(ncol(trainData))))
-modellist <- list()
-
-metric <- "Accuracy"
-for (ntree in c(1000, 1500, 2000, 2500)) {
-  set.seed(1)
-  fit <- train(DMM_4~., data=trainData, method="rf", metric=metric, tuneGrid=tunegrid, trControl=control, ntree=ntree)
-  key <- toString(ntree)
-  modellist[[key]] <- fit
+ acc.tree = c(tree.pred.acc.train,tree.pred.acc.test)
+ acc.tree
 }
-# compare results
-results <- resamples(modellist)
-summary(results)
-dotplot(results)
-rf.model = randomForest(trainData$DMM_4~.,data=trainData,importance=TRUE,ntree=1000)
+## for same test and training set
+tree.pmm = model.fitting.tree(sig.Meta.Data.Vars.less.than.5.percent.indiv.and.feature.missing,'pmm')
+tree.cart = model.fitting.tree(sig.Meta.Data.Vars.less.than.5.percent.indiv.and.feature.missing,'cart')
+tree.sample = model.fitting.tree(sig.Meta.Data.Vars.less.than.5.percent.indiv.and.feature.missing,'sample')
+tree.rf = model.fitting.tree(sig.Meta.Data.Vars.less.than.5.percent.indiv.and.feature.missing,'rf')
 
-varImpPlot(rf.model)
-rf.predicted.train = predict(rf.model,trainData,type='class')
-rf.pred.conf.mat.train = table(rf.predicted.train,trainData$DMM_4)
-rf.pred.conf.mat.train
-train.rf.accu = sum(diag(rf.pred.conf.mat.train))/sum(rf.pred.conf.mat.train)*100
-train.rf.accu
-rf.predicted.test= predict(rf.model,testData,type = 'class') 
-##rf_predicted_df = as.data.frame(rf.predicted)
-class.rf.conf.mat = table(rf.predicted.test,testData.DMM4.label)
-class.rf.conf.mat
-test.rf.accu=sum(diag(class.rf.conf.mat))/sum(class.rf.conf.mat)*100 ## 40.66 percent accuracy
-test.rf.accu
 
-##BOOSTING MODEL
-library(gbm)
-boosting.Model <-gbm(trainData$DMM_4~.,data=trainData,				
-                     distribution="multinomial",     
-                                    # number of trees
-                     shrinkage=0.01,              # shrinkage or learning rate, 0.001 to 0.1 usually work
-                     interaction.depth=3,n.trees = 1000)       # 1: additive model, 2: two-way interactions, etc.) 
+##Linear discriminant analysis fitting function
 
 
 
 
-boosting_predicted_train = predict(boosting.Model,trainData,type='response',n.trees = 1000)
-boosting_predicted_train_df = as.data.frame(boosting_predicted_train)
-boosting.pred=colnames(boosting_predicted_train_df)[apply(boosting_predicted_train_df,1,which.max)]
-boosting_predicted_train_df$predicted.group = boosting.pred
-boosting_predicted_train_df$predicted.group = as.factor(boosting_predicted_train_df$predicted.group)
-
-library(plyr)
-predicted.boosting.train.class=mapvalues(boosting_predicted_train_df
-          $predicted.group,from=c('1.1000','2.1000','3.1000','4.1000'),to=c('1','2','3','4'))
-boosting.pred.conf.mat.train = table(predicted.boosting.train.class,trainData$DMM_4)
-boosting.pred.conf.mat.train
-boosting.pred.acc.train = sum(diag(boosting.pred.conf.mat.train))/sum(boosting.pred.conf.mat.train)*100
-
-boosting.pred.test <- predict(boosting.Model,testData,type = "response",n.trees = 1000)
-
-boosting_predicted_test_df = as.data.frame(boosting.pred.test)
-boosting.pred.test=colnames(boosting_predicted_test_df)[apply(boosting_predicted_test_df,1,which.max)]
-boosting_predicted_test_df$predicted.group = boosting.pred.test
-boosting_predicted_test_df$predicted.group = as.factor(boosting_predicted_test_df$predicted.group)
-View(boosting_predicted_test_df)
-predicted.boosting.test.class=mapvalues(boosting_predicted_test_df$predicted.group,from=c('1.1000','2.1000','3.1000','4.1000'),to=c('1','2','3','4'))
-boosting.pred.conf.mat.test = table(predicted.boosting.test.class,testData.DMM4.label)
-boosting.pred.conf.mat.test
-boosting.pred.acc.test = sum(diag(boosting.pred.conf.mat.test))/sum(boosting.pred.conf.mat.test)*100
-boosting.pred.acc.test
-
-##BAGGING
-matrix.of.test.accuracy.bagging=matrix(0,nrow=1000,ncol=1)
-matrix.of.train.accuracy.bagging=matrix(0,nrow=1000,ncol=1)
-colnames(testData) = colnames(trainData)
-testData$Family_Member_IBD=testData$FAMILYMEMBER_Inflammatory_Bowel_Disease_andere
-trainData$Family_Member_IBD=trainData$FAMILYMEMBER_Inflammatory_Bowel_Disease_andere
 
 
-##BetaGLobulines
 
-testData$BetaGLobulines = testData$Betaglobulin
-testData$Betaglobulin = NULL
-testData$BetaGLobulines = testData$`BètaGlobulines_gL`
-testData$`BètaGlobulines_gL` = NULL
-library(rpart)
-for (i in 1:1000){
+
+##Random forest function
+model.fitting.rf=function(x,y){
+  library(randomForest)
+  imput.results=mice(x,m=3,method = y,seed = 500)
+  ##imput.results=mice(sig.Meta.Data.Vars.less.than.5.percent.indiv.and.feature.missing,m=3,method = 'pmm',seed = 500)
+  data.after.imput=complete(imput.results)
+  data.after.imput$SampleId = as.factor(rownames(data.after.imput))
+  data.after.imput.dmm = merge(data.after.imput,DMM4.class.data,DMM4.class.data,by.x=c('SampleId'),by.y=c('SampleId'))
+  data.after.imput.dmm$DMM_4 = as.factor(data.after.imput.dmm$DMM_4)
+  trainData = data.after.imput.dmm[trainIndex,] ##1310
+  
+  testData = data.after.imput.dmm[testIndex,] ## 659
+  testData.DMM4.label = testData$DMM_4
+  
+  
+  
+  rf.model = randomForest(trainData$DMM_4~.,data=trainData[,-1],importance=TRUE,ntree=1000)
+  
+  ##varImpPlot(rf.model)
+  rf.predicted.train = predict(rf.model,trainData,type='class')
+  rf.pred.conf.mat.train = table(rf.predicted.train,trainData$DMM_4)
+  rf.pred.conf.mat.train
+  train.rf.accu = sum(diag(rf.pred.conf.mat.train))/sum(rf.pred.conf.mat.train)*100
+  train.rf.accu
+  rf.predicted.test= predict(rf.model,testData[,-1],type = 'class') 
+  ##rf_predicted_df = as.data.frame(rf.predicted)
+  class.rf.conf.mat = table(rf.predicted.test,testData.DMM4.label)
+  class.rf.conf.mat
+  test.rf.accu=sum(diag(class.rf.conf.mat))/sum(class.rf.conf.mat)*100 ## 40.66 percent accuracy
+  test.rf.accu
+  acc.rf = c(train.rf.accu,test.rf.accu)
+  acc.rf
+}
+rf.pmm = model.fitting.rf(sig.Meta.Data.Vars.less.than.5.percent.indiv.and.feature.missing,'pmm')
+rf.cart = model.fitting.rf(sig.Meta.Data.Vars.less.than.5.percent.indiv.and.feature.missing,'cart')
+rf.sample = model.fitting.rf(sig.Meta.Data.Vars.less.than.5.percent.indiv.and.feature.missing,'sample')
+rf.rf = model.fitting.rf(sig.Meta.Data.Vars.less.than.5.percent.indiv.and.feature.missing,'rf')
+
+
+##Boosting function
+model.fitting.boosting = function(x,y){
+  imput.results=mice(x,m=3,method = y,seed = 500)
+  ##imput.results=mice(sig.Meta.Data.Vars.less.than.5.percent.indiv.and.feature.missing,m=3,method = 'pmm',seed = 500)
+  data.after.imput=complete(imput.results)
+  data.after.imput$SampleId = as.factor(rownames(data.after.imput))
+  data.after.imput.dmm = merge(data.after.imput,DMM4.class.data,DMM4.class.data,by.x=c('SampleId'),by.y=c('SampleId'))
+  data.after.imput.dmm$DMM_4 = as.factor(data.after.imput.dmm$DMM_4)
+  trainData = data.after.imput.dmm[trainIndex,] ##1310
+  
+  testData = data.after.imput.dmm[testIndex,] ## 659
+  testData.DMM4.label = testData$DMM_4
+  
+  library(gbm)
+  boosting.Model <-gbm(trainData$DMM_4~.,data=trainData[,-1],				
+                       distribution="multinomial",     
+                       # number of trees
+                       shrinkage=0.01,              # shrinkage or learning rate, 0.001 to 0.1 usually work
+                       interaction.depth=1,n.trees = 1000,bag.fraction = 0.5,train.fraction =1,n.cores = NULL )       # 1: additive model, 2: two-way interactions, etc.) 
+  boosting_predicted_train = predict(boosting.Model,trainData[,-1],type='response',n.trees = 1000)
+  boosting_predicted_train_df = as.data.frame(boosting_predicted_train)
+  boosting.pred=colnames(boosting_predicted_train_df)[apply(boosting_predicted_train_df,1,which.max)]
+  boosting_predicted_train_df$predicted.group = boosting.pred
+  boosting_predicted_train_df$predicted.group = as.factor(boosting_predicted_train_df$predicted.group)
+  library(plyr)
+  predicted.boosting.train.class=mapvalues(boosting_predicted_train_df
+                                           $predicted.group,from=c('1.1000','2.1000','3.1000','4.1000'),to=c('1','2','3','4'))
+  boosting.pred.conf.mat.train = table(predicted.boosting.train.class,trainData$DMM_4)
+  boosting.pred.conf.mat.train
+  boosting.pred.acc.train = sum(diag(boosting.pred.conf.mat.train))/sum(boosting.pred.conf.mat.train)*100
+  
+  boosting.pred.test <- predict(boosting.Model,testData[,-1],type = "response",n.trees = 1000)
+  
+  boosting_predicted_test_df = as.data.frame(boosting.pred.test)
+  boosting.pred.test=colnames(boosting_predicted_test_df)[apply(boosting_predicted_test_df,1,which.max)]
+  boosting_predicted_test_df$predicted.group = boosting.pred.test
+  boosting_predicted_test_df$predicted.group = as.factor(boosting_predicted_test_df$predicted.group)
+  
+  predicted.boosting.test.class=mapvalues(boosting_predicted_test_df$predicted.group,from=c('1.1000','2.1000','3.1000','4.1000'),to=c('1','2','3','4'))
+  boosting.pred.conf.mat.test = table(predicted.boosting.test.class,testData.DMM4.label)
+  boosting.pred.conf.mat.test
+  boosting.pred.acc.test = sum(diag(boosting.pred.conf.mat.test))/sum(boosting.pred.conf.mat.test)*100
+  boosting.pred.acc.test
+  acc.boosting = c(boosting.pred.acc.train,boosting.pred.acc.test)
+  acc.boosting
+}
+boosting.pmm = model.fitting.boosting(sig.Meta.Data.Vars.less.than.5.percent.indiv.and.feature.missing,'pmm')
+boosting.cart = model.fitting.rf(sig.Meta.Data.Vars.less.than.5.percent.indiv.and.feature.missing,'cart')
+boosting.sample = model.fitting.rf(sig.Meta.Data.Vars.less.than.5.percent.indiv.and.feature.missing,'sample')
+boosting.rf = model.fitting.rf(sig.Meta.Data.Vars.less.than.5.percent.indiv.and.feature.missing,'rf')
+
+
+
+##Bagging function
+model.fitting.bagging = function(x,y,no.of.trees){
+  imput.results=mice(x,m=3,method = y,seed = 500)
+  ##imput.results=mice(sig.Meta.Data.Vars.less.than.5.percent.indiv.and.feature.missing,m=3,method = 'pmm',seed = 500)
+  data.after.imput=complete(imput.results)
+  data.after.imput$SampleId = as.factor(rownames(data.after.imput))
+  data.after.imput.dmm = merge(data.after.imput,DMM4.class.data,DMM4.class.data,by.x=c('SampleId'),by.y=c('SampleId'))
+  data.after.imput.dmm$DMM_4 = as.factor(data.after.imput.dmm$DMM_4)
+  trainData = data.after.imput.dmm[trainIndex,] ##1310
+  
+  testData = data.after.imput.dmm[testIndex,] ## 659
+  testData.DMM4.label = testData$DMM_4
+  matrix.of.test.accuracy.bagging=matrix(0,nrow=no.of.trees,ncol=1)
+  matrix.of.train.accuracy.bagging=matrix(0,nrow=no.of.trees,ncol=1)
+library(tree)
+for (i in 1:no.of.trees){
   ids = sample(1:nrow(trainData),2*nrow(trainData)/3)
   train.new = trainData[ids,]
-  treemodel<-rpart(DMM_4~.,data=train.new,method = 'class')
+  treemodel<-tree(DMM_4~.,data=train.new[,-1],method = 'class')
   tree.pred.train = predict(treemodel,train.new,type = 'class')
   tree.pred.test = predict(treemodel,testData,type = 'class')
   conf.mat.tree.test = table(testData$DMM_4,tree.pred.test)
@@ -255,50 +299,13 @@ for (i in 1:1000){
   accu.train = sum(diag(conf.mat.tree.train))/sum(conf.mat.tree.train)
   matrix.of.test.accuracy.bagging[i,1] = accu.test
   matrix.of.train.accuracy.bagging[i,1] = accu.train
+ 
   
 }
-mean.bagging.accuracy.test = mean(as.vector(matrix.of.test.accuracy.bagging[,1]))*100
-mean.bagging.accuracy.train = mean(as.vector(matrix.of.train.accuracy.bagging[,1]))*100
-
-
-
-
-
-
-
-acc.df.train = cbind(tree.pred.acc.train,train.rf.accu,boosting.pred.acc.train,mean.bagging.accuracy.train)
-acc.df.test= cbind(tree.pred.acc.test,test.rf.accu,boosting.pred.acc.test,mean.bagging.accuracy.test)
-convert.to.percent = function(x){
-  round(x,digits=1)
-}
-acc.df.train.rounded = apply(acc.df.train,1,convert.to.percent) ## 2 is for cols, 1 is for rows
-acc.df.test.rounded = apply(acc.df.test,1,convert.to.percent)
-acc.df.train
-acc.df.test
-acc.df.train.rounded
-acc.df.test.rounded
-
-
-acc.df.train.rounded = as.data.frame(acc.df.train.rounded)
-acc.df.test.rounded = as.data.frame(acc.df.test.rounded)
-
-acc.df.train.rounded$Train_Accuracy = acc.df.train.rounded$V1
-acc.df.train.rounded$Test_Accuracy = NULL
-acc.df.train.rounded$Train_Accuracy = as.numeric(acc.df.train.rounded$Train_Accuracy)
-Algo = c('Tree','Ramdom Forest','Boosting','Bagging')
-acc.df.train.rounded$Algorithm = Algo
-library(ggplot2)
-train.accuracy.plot = ggplot(acc.df.train.rounded,aes(x=Algorithm,y=Train_Accuracy))+geom_bar(stat='identity',aes(fill=Algorithm),width = 0.3,show.legend = FALSE)+ylim(0,100)+theme(axis.text.x = element_text(angle = 45, hjust = 1))
-
-train.accuracy.plot
-
-acc.df.test.rounded$Test_Accuracy = acc.df.test.rounded$V1
-acc.df.test.rounded$Algorithm = Algo
-test.accuracy.plot = ggplot(acc.df.test.rounded,aes(x=Algorithm,y=Test_Accuracy))+geom_bar(stat='identity',aes(fill=Algorithm),width = 0.3,show.legend = FALSE)+ylim(0,100)+theme(axis.text.x = element_text(angle = 45, hjust = 1))
-test.accuracy.plot
-
-library(gridExtra)
-grid.arrange(train.accuracy.plot,test.accuracy.plot,ncol=2)
-
-
-
+  mean.bagging.accuracy.test = mean(as.vector(matrix.of.test.accuracy.bagging[,1]))*100
+  mean.bagging.accuracy.train = mean(as.vector(matrix.of.train.accuracy.bagging[,1]))*100
+  accu.bagging = c(mean.bagging.accuracy.test,mean.bagging.accuracy.train)
+}  
+## first test, then training
+bagging.pmm.100.trees = model.fitting.bagging(sig.Meta.Data.Vars.less.than.5.percent.indiv.and.feature.missing,'pmm',100)
+bagging.pmm.1000.trees = model.fitting.bagging(sig.Meta.Data.Vars.less.than.5.percent.indiv.and.feature.missing,'pmm',1000)
