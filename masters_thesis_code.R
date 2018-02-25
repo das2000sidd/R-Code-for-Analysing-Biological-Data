@@ -64,7 +64,6 @@ library(mice)
 md.Pattern.Results=md.pattern(sig.Meta.Data.Vars.Only)
 ## frequency of sick leaves, no of work days and age at first work had 50%,50% and 27% missing. dropping those initially
 sig.Meta.Data.Vars.Only.max.ten.percent.missing =sig.Meta.Data.Vars.Only[,-which(names(sig.Meta.Data.Vars.Only) %in% c("frequency_of_sick_leaves_last_year"," number_of_work_daysaweek","age_at_first_work"))]
-##LOT OF MISSING DATA- DOING MULTIPLE IMPUTATION
 
 percent.miss = function(x){
   sum(is.na(x))/length(x)*100
@@ -109,28 +108,12 @@ sig.Meta.Data.Vars.less.than.5.percent.indiv.and.feature.missing$PARTICIPANTS_AL
 sig.Meta.Data.Vars.less.than.5.percent.indiv.and.feature.missing$J01CA04.1= NULL
 sig.Meta.Data.Vars.less.than.5.percent.indiv.and.feature.missing$J01CR02.1 = NULL
 sig.Meta.Data.Vars.less.than.5.percent.indiv.and.feature.missing$J01XE01.1 = NULL
-##imput.results=mice(sig.Meta.Data.Vars.less.than.5.percent.indiv.and.feature.missing,m=40,method = "pmm",seed = 500)##1975 observations of 58 variables
-##data.after.imput.1 = complete(imput.results,1)
-##data.after.imput.2 = complete(imput.results,2)
+
 DMM.class.data = read.csv(file="DMM4clusters2999Samples.csv",header = TRUE)
 ##View(DMM.class.data)
 DMM4.class.data = DMM.class.data[,c(1,4)]
 
-##View(DMM4.class.data)
-
-
 types.of.imput=c('pmm','midastouch','sample','cart','rf','2lonly.pmm')
-
-
-
-
-##pmm works
-##midastouch does not work
-##sample works
-##cart works
-##rf works
-## 2lonly.pmm does not work
-
 
 set.seed(1)
 trainIndex = sample(1:nrow(sig.Meta.Data.Vars.less.than.5.percent.indiv.and.feature.missing),2*nrow(sig.Meta.Data.Vars.less.than.5.percent.indiv.and.feature.missing)/3)##1243 only
@@ -184,9 +167,7 @@ model.fitting.rf=function(x,y){
   
   testData = data.after.imput.dmm[testIndex,] ## 659
   testData.DMM4.label = testData$DMM_4
-  
-  
-  
+ 
   rf.model = randomForest(trainData$DMM_4~.,data=trainData[,-1],importance=TRUE,ntree=1000)
   
   ##varImpPlot(rf.model)
@@ -266,7 +247,6 @@ boosting.rf = model.fitting.rf(sig.Meta.Data.Vars.less.than.5.percent.indiv.and.
 ##Bagging function
 model.fitting.bagging = function(x,y,no.of.trees){
   imput.results=mice(x,m=3,method = y,seed = 500)
-  ##imput.results=mice(sig.Meta.Data.Vars.less.than.5.percent.indiv.and.feature.missing,m=3,method = 'pmm',seed = 500)
   data.after.imput=complete(imput.results)
   data.after.imput$SampleId = as.factor(rownames(data.after.imput))
   data.after.imput.dmm = merge(data.after.imput,DMM4.class.data,DMM4.class.data,by.x=c('SampleId'),by.y=c('SampleId'))
@@ -300,3 +280,6 @@ for (i in 1:no.of.trees){
 ## first test, then training
 bagging.pmm.100.trees = model.fitting.bagging(sig.Meta.Data.Vars.less.than.5.percent.indiv.and.feature.missing,'pmm',100)
 bagging.pmm.1000.trees = model.fitting.bagging(sig.Meta.Data.Vars.less.than.5.percent.indiv.and.feature.missing,'pmm',1000)
+bagging.cart.1000.trees = model.fitting.bagging(sig.Meta.Data.Vars.less.than.5.percent.indiv.and.feature.missing,'cart',1000)
+bagging.sample.1000.trees = model.fitting.bagging(sig.Meta.Data.Vars.less.than.5.percent.indiv.and.feature.missing,'sample',1000)
+bagging.rf.1000.trees = model.fitting.bagging(sig.Meta.Data.Vars.less.than.5.percent.indiv.and.feature.missing,'rf',1000)
