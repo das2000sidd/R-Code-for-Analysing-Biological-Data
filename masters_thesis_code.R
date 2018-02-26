@@ -170,14 +170,14 @@ model.fitting.rf=function(x,y){
  
   rf.model = randomForest(trainData$DMM_4~.,data=trainData[,-1],importance=TRUE,ntree=1000)
   
-  ##varImpPlot(rf.model)
+  varImpPlot(rf.model)
   rf.predicted.train = predict(rf.model,trainData,type='class')
   rf.pred.conf.mat.train = table(rf.predicted.train,trainData$DMM_4)
   rf.pred.conf.mat.train
   train.rf.accu = sum(diag(rf.pred.conf.mat.train))/sum(rf.pred.conf.mat.train)*100
   train.rf.accu
   rf.predicted.test= predict(rf.model,testData[,-1],type = 'class') 
-  ##rf_predicted_df = as.data.frame(rf.predicted)
+  
   class.rf.conf.mat = table(rf.predicted.test,testData.DMM4.label)
   class.rf.conf.mat
   test.rf.accu=sum(diag(class.rf.conf.mat))/sum(class.rf.conf.mat)*100 ## 40.66 percent accuracy
@@ -275,11 +275,128 @@ for (i in 1:no.of.trees){
 }
   mean.bagging.accuracy.test = mean(as.vector(matrix.of.test.accuracy.bagging[,1]))*100
   mean.bagging.accuracy.train = mean(as.vector(matrix.of.train.accuracy.bagging[,1]))*100
-  accu.bagging = c(mean.bagging.accuracy.test,mean.bagging.accuracy.train)
+  accu.bagging = c(mean.bagging.accuracy.train,mean.bagging.accuracy.test)
 }  
-## first test, then training
+## first training, then test
 bagging.pmm.100.trees = model.fitting.bagging(sig.Meta.Data.Vars.less.than.5.percent.indiv.and.feature.missing,'pmm',100)
 bagging.pmm.1000.trees = model.fitting.bagging(sig.Meta.Data.Vars.less.than.5.percent.indiv.and.feature.missing,'pmm',1000)
 bagging.cart.1000.trees = model.fitting.bagging(sig.Meta.Data.Vars.less.than.5.percent.indiv.and.feature.missing,'cart',1000)
 bagging.sample.1000.trees = model.fitting.bagging(sig.Meta.Data.Vars.less.than.5.percent.indiv.and.feature.missing,'sample',1000)
 bagging.rf.1000.trees = model.fitting.bagging(sig.Meta.Data.Vars.less.than.5.percent.indiv.and.feature.missing,'rf',1000)
+
+cart.imput.results.training=round(c(bagging.cart.1000.trees[1],boosting.cart[1],rf.cart[1],tree.cart[1]),1)
+cart.imput.results.testing=round(c(bagging.cart.1000.trees[2],boosting.cart[2],rf.cart[2],tree.cart[2]),1)
+cart.imput.df = cbind(cart.imput.results.training,cart.imput.results.testing)
+rownames(cart.imput.df) =c('Bagging','Boosting','Random Forest','Single Decision Tree')
+
+pmm.imput.results.training=round(c(bagging.pmm.1000.trees[1],boosting.pmm[1],rf.pmm[1],tree.pmm[1]),1)
+pmm.imput.results.testing=round(c(bagging.pmm.1000.trees[2],boosting.pmm[2],rf.pmm[2],tree.pmm[2]),1)
+pmm.imput.df = cbind(pmm.imput.results.training,pmm.imput.results.testing)
+rownames(pmm.imput.df) =c('Bagging','Boosting','Random Forest','Single Decision Tree')
+
+
+rf.imput.results.training=round(c(bagging.rf.1000.trees[1],boosting.rf[1],rf.rf[1],tree.rf[1]),1)
+rf.imput.results.testing=round(c(bagging.rf.1000.trees[2],boosting.rf[2],rf.rf[2],tree.rf[2]),1)
+rf.imput.df = cbind(rf.imput.results.training,rf.imput.results.testing)
+rownames(rf.imput.df) =c('Bagging','Boosting','Random Forest','Single Decision Tree')
+
+
+sample.imput.results.training=round(c(bagging.sample.1000.trees[1],boosting.sample[1],rf.sample[1],tree.sample[1]),1)
+sample.imput.results.testing=round(c(bagging.sample.1000.trees[2],boosting.sample[2],rf.sample[2],tree.sample[2]),1)
+sample.imput.df = cbind(sample.imput.results.training,sample.imput.results.testing)
+rownames(sample.imput.df) =c('Bagging','Boosting','Random Forest','Single Decision Tree')
+
+all.pred.accu.df = cbind(cart.imput.df,pmm.imput.df,rf.imput.df,sample.imput.df)
+
+## plot type 1 of per imputation method, how did each algorithm do
+## plot type 2 of within an algorith, how did each imputation method do
+all.pred.accu.train = all.pred.accu.df[,c(1,3,5,7)]
+
+library(ggplot2)
+all.pred.accu.train = as.data.frame(all.pred.accu.train)
+algo_type=c('CART','PMM','RF','Sample')
+
+
+
+##BAGGING DF TRAIN
+bagging.df.train = rbind(all.pred.accu.train[1,],algo_type)
+bagging.df.train = t(bagging.df.train)
+bagging.df.train = as.data.frame(bagging.df.train)
+
+dev.off()
+bagging.df.train$Bagging_Accuracy_Train = as.numeric(as.character(bagging.df.train$Bagging))
+setnames(bagging.df.train,old=c('2'),new=c('Imputation_Type'))
+
+bagging.train=ggplot(bagging.df.train,aes(x=Imputation_Type,y=Bagging_Accuracy_Train))+geom_bar(stat='identity',aes(fill=Imputation_Type),width = 0.3,show.legend = FALSE)+ylim(0,100)
+
+##BOOSTING DF TRAIN
+boosting.df.train = rbind(all.pred.accu.train[2,],algo_type)
+boosting.df.train = t(boosting.df.train)
+boosting.df.train = as.data.frame(boosting.df.train)
+boosting.df.train$Boosting_Accuracy_Train = as.numeric(as.character(boosting.df.train$Boosting))
+setnames(boosting.df.train,old=c('2'),new=c('Imputation_Type'))
+boosting.train=ggplot(boosting.df.train,aes(x=Imputation_Type,y=Boosting_Accuracy_Train))+geom_bar(stat='identity',aes(fill=Imputation_Type),width = 0.3,show.legend = FALSE)+ylim(0,100)
+
+
+
+##RANDOM FOREST DF TRAIN
+random.forest.df.train = rbind(all.pred.accu.train[3,],algo_type)
+random.forest.df.train = t(random.forest.df.train)
+random.forest.df.train = as.data.frame(random.forest.df.train)
+random.forest.df.train$RF_Accuracy_Train = as.numeric(as.character(random.forest.df.train$`Random Forest`))
+setnames(random.forest.df.train,old=c('2'),new=c('Imputation_Type'))
+random.forest.train=ggplot(random.forest.df.train,aes(x=Imputation_Type,y=RF_Accuracy_Train))+geom_bar(stat='identity',aes(fill=Imputation_Type),width = 0.3,show.legend = FALSE)+ylim(0,100)
+
+## CLASSIFICATION TREE TRAIN
+single.tree.df.train = rbind(all.pred.accu.train[4,],algo_type)
+single.tree.df.train = t(single.tree.df.train)
+single.tree.df.train = as.data.frame(single.tree.df.train)
+single.tree.df.train$Tree_Accuracy_Train = as.numeric(as.character(single.tree.df.train$`Single Decision Tree`))
+setnames(single.tree.df.train,old=c('2'),new=c('Imputation_Type'))
+single.tree.train=ggplot(single.tree.df.train,aes(x=Imputation_Type,y=Tree_Accuracy_Train))+geom_bar(stat='identity',aes(fill=Imputation_Type),width = 0.3,show.legend = FALSE)+ylim(0,100)
+
+
+library(gridExtra)
+grid.arrange(bagging.train,boosting.train,random.forest.train,single.tree.train,nrow=2,ncol=2)
+
+all.pred.accu.test = all.pred.accu.df[,c(2,4,6,8)]
+all.pred.accu.test = as.data.frame(all.pred.accu.test)
+##BAGGING DF TEST
+bagging.df.test = rbind(all.pred.accu.train[1,],algo_type)
+bagging.df.test = t(bagging.df.test)
+bagging.df.test = as.data.frame(bagging.df.test)
+
+dev.off()
+bagging.df.test$Bagging_Accuracy_Test = as.numeric(as.character(bagging.df.test$Bagging))
+setnames(bagging.df.test,old=c('2'),new=c('Imputation_Type'))
+
+bagging.test=ggplot(bagging.df.test,aes(x=Imputation_Type,y=Bagging_Accuracy_Test))+geom_bar(stat='identity',aes(fill=Imputation_Type),width = 0.3,show.legend = FALSE)+ylim(0,100)
+
+##BOOSTING DF TEST
+boosting.df.test = rbind(all.pred.accu.test[2,],algo_type)
+boosting.df.test = t(boosting.df.test)
+boosting.df.test = as.data.frame(boosting.df.test)
+boosting.df.test$Boosting_Accuracy_Test = as.numeric(as.character(boosting.df.test$Boosting))
+setnames(boosting.df.test,old=c('2'),new=c('Imputation_Type'))
+boosting.test=ggplot(boosting.df.test,aes(x=Imputation_Type,y=Boosting_Accuracy_Test))+geom_bar(stat='identity',aes(fill=Imputation_Type),width = 0.3,show.legend = FALSE)+ylim(0,100)
+
+
+##RANDOM FOREST DF TEST
+random.forest.df.test = rbind(all.pred.accu.test[3,],algo_type)
+random.forest.df.test = t(random.forest.df.test)
+random.forest.df.test = as.data.frame(random.forest.df.test)
+random.forest.df.test$RF_Accuracy_Test = as.numeric(as.character(random.forest.df.test$`Random Forest`))
+setnames(random.forest.df.test,old=c('2'),new=c('Imputation_Type'))
+random.forest.test=ggplot(random.forest.df.test,aes(x=Imputation_Type,y=RF_Accuracy_Test))+geom_bar(stat='identity',aes(fill=Imputation_Type),width = 0.3,show.legend = FALSE)+ylim(0,100)
+
+
+##CLASSIFICATION TREE DF TEST
+single.tree.df.test = rbind(all.pred.accu.test[4,],algo_type)
+single.tree.df.test = t(single.tree.df.test)
+single.tree.df.test = as.data.frame(single.tree.df.test)
+single.tree.df.test$Decision_Tree_Accuracy_Test = as.numeric(as.character(single.tree.df.test$`Single Decision Tree`))
+setnames(single.tree.df.test,old=c('2'),new=c('Imputation_Type'))
+single.tree.df.test=ggplot(single.tree.df.test,aes(x=Imputation_Type,y=Decision_Tree_Accuracy_Test))+geom_bar(stat='identity',aes(fill=Imputation_Type),width = 0.3,show.legend = FALSE)+ylim(0,100)
+
+
+grid.arrange(bagging.test,boosting.test,random.forest.test,single.tree.df.test,nrow=2,ncol=2)
